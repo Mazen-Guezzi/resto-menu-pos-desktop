@@ -1,0 +1,34 @@
+import Store from 'electron-store';
+
+export interface Prefs {
+  windowBounds: { x?: number; y?: number; width: number; height: number };
+  preFloatingBounds: { x?: number; y?: number; width: number; height: number } | null;
+  floating: boolean;
+  soundEnabled: boolean;
+  activeBusinessId: string | null;
+  printerKitchen: string | null;
+  printerCustomer: string | null;
+  autoPrintOnAccept: boolean;
+  hideDockOnTray: boolean;
+  lang: 'en' | 'fr' | 'ar';
+}
+
+const defaults: Prefs = {
+  windowBounds: { width: 1280, height: 800 },
+  preFloatingBounds: null,
+  floating: false,
+  soundEnabled: true,
+  activeBusinessId: null,
+  printerKitchen: null,
+  printerCustomer: null,
+  autoPrintOnAccept: true,
+  hideDockOnTray: false,
+  lang: 'fr',
+};
+
+export const FLOATING_SIZE = { width: 380, height: 640 } as const;
+
+export const prefs = new Store<Prefs>({
+  name: 'swiftqr-pos-prefs',
+  defaults,
+});

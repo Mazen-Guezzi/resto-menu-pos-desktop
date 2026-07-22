@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Only one release build per ref at a time — cancels older in-flight runs
+# so a fresh tag push doesn't race with an earlier one.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build & publish
+        env:
+          # electron-builder uploads to GitHub Releases with this token.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Supabase env vars are baked in at build time by Next.js. If your
+          # repo secrets provide these, they're inlined into the renderer
+          # bundle. Otherwise the built app boots to the login screen's
+          # "config missing" state and you can set them per-install.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run release

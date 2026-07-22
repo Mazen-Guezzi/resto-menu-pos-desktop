@@ -1,0 +1,50 @@
+{
+  "name": "resto-menu-pos-desktop",
+  "productName": "SwiftQR POS",
+  "version": "0.1.2",
+  "description": "Desktop POS for SwiftQR — silent-print orders, offline queue, floating window",
+  "author": "SwiftQR",
+  "private": true,
+  "main": "dist/electron/main.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:renderer": "next dev -p 8095",
+    "dev:electron": "wait-on http://127.0.0.1:8095 && node scripts/build-electron.mjs --watch",
+    "dev": "concurrently -k -n renderer,electron -c cyan,magenta \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "build:renderer": "next build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build": "npm run build:renderer && npm run build:electron",
+    "start": "electron dist/electron/main.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never",
+    "release": "npm run build && electron-builder --publish always",
+    "clean": "rm -rf .next out dist release node_modules"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.9",
+    "i18next": "^24.2.3",
+    "lucide-react": "^0.462.0",
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^15.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "concurrently": "^9.0.1",
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.4",
+    "wait-on": "^8.0.1"
+  }
+}

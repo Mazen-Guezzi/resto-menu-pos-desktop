@@ -1,0 +1,92 @@
+appId: com.swiftqr.pos
+productName: SwiftQR POS
+copyright: Copyright © 2026 SwiftQR
+artifactName: SwiftQR-POS-${version}-${os}-${arch}.${ext}
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - dist/**/*
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+  - "!**/{README.md,CHANGELOG.md,LICENSE,LICENSE.md,LICENSE.txt}"
+  - "!**/{.editorconfig,.eslintrc,.prettierrc,.gitignore,tsconfig.json,tsconfig.electron.json}"
+  - "!**/test/**"
+  - "!**/tests/**"
+  - "!**/*.test.js"
+  - "!**/*.spec.js"
+
+extraMetadata:
+  main: dist/electron/main.js
+
+publish:
+  provider: github
+  owner: Mazen-Guezzi
+  repo: resto-menu-pos-desktop
+  releaseType: release
+
+# ---------------------------------------------------------------------------
+# macOS
+# ---------------------------------------------------------------------------
+mac:
+  category: public.app-category.business
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  # Signing + notarization are deferred until we have a Developer ID cert.
+  # The DMG will show an "unidentified developer" warning; users can
+  # right-click → Open the first time.
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+
+dmg:
+  writeUpdateInfo: true
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ---------------------------------------------------------------------------
+# Windows
+# ---------------------------------------------------------------------------
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+  # Add EV / SHA-256 cert config here once available.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SwiftQR POS
+  deleteAppDataOnUninstall: false
+
+# ---------------------------------------------------------------------------
+# Linux
+# ---------------------------------------------------------------------------
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Office
+  synopsis: Desktop POS for SwiftQR
+  description: |
+    Silent-print orders, real-time notifications, offline queue.
+    Runs alongside your existing SwiftQR business account.
