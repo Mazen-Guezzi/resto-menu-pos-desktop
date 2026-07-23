@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../lib/session-context';
 import { supabaseConfigured } from '../lib/supabase';
+import { friendlyErrorMessage } from '../lib/orders/errors';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setSubmitting(true);
     const { error: err } = await signIn(email.trim(), password);
     setSubmitting(false);
-    if (err) setError(err.message);
+    if (err) setError(friendlyLoginError(err.message, t));
     else router.replace('/orders');
   };
 
@@ -86,6 +87,16 @@ export default function LoginPage() {
       </div>
     </main>
   );
+}
+
+function friendlyLoginError(raw: string, t: (k: string) => string): string {
+  const src = raw.toLowerCase();
+  if (src.includes('invalid login credentials') || src.includes('invalid_grant')) {
+    return t('auth.error.invalidCredentials');
+  }
+  if (src.includes('email not confirmed')) return t('auth.error.emailNotConfirmed');
+  if (src.includes('rate limit') || src.includes('too many')) return t('auth.error.tooMany');
+  return friendlyErrorMessage(raw, t);
 }
 
 const styles: Record<string, React.CSSProperties> = {

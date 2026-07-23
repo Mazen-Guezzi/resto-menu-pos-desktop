@@ -82,10 +82,6 @@ export default function OrdersPage() {
     });
   }, [orders]);
 
-  // Tray / dock badge tracks pending count.
-  useEffect(() => {
-    getPosApi()?.badge.set(pending);
-  }, [pending]);
 
   // Counts per tab.
   const counts = useMemo<Record<Tab, number>>(() => {

@@ -27,6 +27,9 @@ export interface NewOrderPayload {
   business_id: number;
   type: OrderType;
   table_number?: string | null;
+  delivery_address?: string | null;
+  delivery_lat?: number | null;
+  delivery_lng?: number | null;
   customer_name: string;
   customer_phone: string;
   customer_email?: string | null;
@@ -86,6 +89,10 @@ export async function insertOrderPayload(payload: NewOrderPayload): Promise<numb
     status: 'pending',
     type: payload.type,
     table_number: payload.type === 'dine_in' ? payload.table_number ?? null : null,
+    delivery_address:
+      payload.type === 'delivery' ? payload.delivery_address ?? null : null,
+    delivery_lat: payload.type === 'delivery' ? payload.delivery_lat ?? null : null,
+    delivery_lng: payload.type === 'delivery' ? payload.delivery_lng ?? null : null,
     customer_name: payload.customer_name,
     customer_phone: payload.customer_phone,
     customer_email: payload.customer_email ?? null,

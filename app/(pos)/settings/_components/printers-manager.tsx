@@ -7,6 +7,7 @@ import { getPosApi, type Printer, type PrinterConfig, type PrinterRole } from '.
 import { useSession } from '../../../lib/session-context';
 import { useMenu } from '../../../lib/menu/hooks';
 import { pickUsbPrinter } from '../../../lib/webusb';
+import { friendlyPrintErrorRaw } from '../../../lib/orders/errors';
 
 type OsPrinter = { name: string; displayName: string; isDefault: boolean };
 
@@ -109,7 +110,7 @@ function PrinterRow({
     const kind = printer.role === 'kitchen' ? 'kitchen' : 'customer';
     const res = await getPosApi()!.print.testConfig({ config: printer.config, kind });
     setTesting(false);
-    setMsg({ ok: res.ok, text: res.ok ? t('settings.testOk') : res.error || 'error' });
+    setMsg({ ok: res.ok, text: res.ok ? t('settings.testOk') : friendlyPrintErrorRaw(res.error, t) });
   };
 
   const RoleIcon = printer.role === 'kitchen' ? ChefHat : Receipt;

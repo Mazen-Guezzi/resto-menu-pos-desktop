@@ -4,10 +4,13 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { ListOrdered, Plus, Settings2, LogOut, CloudUpload, CloudAlert } from 'lucide-react';
+import { ListOrdered, Plus, Settings2, LogOut, CloudUpload, CloudAlert, BarChart3 } from 'lucide-react';
 import { useSession } from '../lib/session-context';
 import { useSyncWorker } from '../lib/orders/use-sync-worker';
 import { useIsCompact } from '../lib/orders/use-is-compact';
+import { useBusinesses, usePendingOrdersCount } from '../lib/orders/hooks';
+import { generateBadgeIcon } from '../lib/badge-icon';
+import { getPosApi } from '../lib/pos-api';
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,6 +18,15 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   const { session, loading, signOut, user } = useSession();
   const sync = useSyncWorker();
   const isCompact = useIsCompact();
+  const { active } = useBusinesses();
+  const pending = usePendingOrdersCount(active?.id ?? null);
+
+  // Dock (macOS) / launcher (Linux) / taskbar overlay (Windows) badge stays
+  // in sync with pending-order count regardless of which POS route the user
+  // is currently on.
+  useEffect(() => {
+    getPosApi()?.badge.set({ pending, iconDataUrl: generateBadgeIcon(pending) });
+  }, [pending]);
 
   useEffect(() => {
     if (!loading && !session) router.replace('/login');
@@ -84,6 +96,10 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
             <Link href="/orders" style={styles.navLink}>
               <ListOrdered size={14} />
               <span>{t('nav.orders')}</span>
+            </Link>
+            <Link href="/stats" style={styles.navLink}>
+              <BarChart3 size={14} />
+              <span>{t('nav.stats')}</span>
             </Link>
             <Link href="/orders/new" style={styles.navLinkPrimary}>
               <Plus size={14} />

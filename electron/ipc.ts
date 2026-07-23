@@ -1,6 +1,7 @@
 import { app, ipcMain, BrowserWindow, screen } from 'electron';
 import { prefs, migrateLegacyPrinters, type Prefs, FLOATING_SIZE } from './prefs';
 import { saveSession, loadSession, clearSession } from './auth-store';
+import { storageGet, storageSet, storageRemove } from './storage';
 import { showOrderNotification, updateBadge, type NewOrderNotifPayload } from './notifications';
 import { printTicket, listPrinters, type PrintTicketArgs } from './printing/os';
 import { listUsbPrinters } from './printing/usb';
@@ -93,13 +94,31 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
     return true;
   });
 
+  // Generic encrypted key-value storage exposed to the renderer as
+  // `pos.storage.*`. Supabase JS uses this as its auth storage adapter so
+  // its refresh-token rotation runs against safeStorage-encrypted state
+  // instead of localStorage.
+  ipcMain.handle(CH.storageGet, (_e, key: string) => storageGet(key));
+  ipcMain.handle(CH.storageSet, (_e, key: string, value: string) => {
+    storageSet(key, value);
+  });
+  ipcMain.handle(CH.storageRemove, (_e, key: string) => {
+    storageRemove(key);
+  });
+
   ipcMain.handle(CH.notifyNewOrder, (_e, payload: NewOrderNotifPayload) => {
     showOrderNotification(getWindow(), payload);
   });
 
-  ipcMain.handle(CH.badgeSet, (_e, pending: number) => {
-    updateBadge(getWindow(), Math.max(0, Math.floor(pending)));
-  });
+  ipcMain.handle(
+    CH.badgeSet,
+    (_e, args: number | { pending: number; iconDataUrl?: string }) => {
+      // Backwards-compat: accept a bare number as before, or a bag with icon.
+      const pending = typeof args === 'number' ? args : args.pending;
+      const iconDataUrl = typeof args === 'number' ? undefined : args.iconDataUrl;
+      updateBadge(getWindow(), pending, iconDataUrl);
+    },
+  );
 
   ipcMain.handle(CH.printTicket, (_e, args: PrintTicketArgs) => printTicket(args));
 

@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Printer, X, ChevronRight, Utensils, ShoppingBag, Bike } from 'lucide-react';
+import { Check, Printer, X, ChevronRight, Utensils, ShoppingBag, Bike, ChefHat, Receipt } from 'lucide-react';
 import type { Business, Order, OrderStatus, OrderType } from '../../../lib/orders/types';
 import { formatCents, formatClock, formatRelativeTime } from '../../../lib/orders/format';
 import { canCancel, NEXT_STATUS } from '../../../lib/orders/status';
 import { updateOrderStatus } from '../../../lib/orders/mutations';
+import { friendlyErrorMessage, friendlyPrintErrors } from '../../../lib/orders/errors';
 import { printOrder } from '../../../lib/orders/print';
 import { getPosApi } from '../../../lib/pos-api';
 import { StatusPill } from './status-pill';
@@ -59,7 +60,7 @@ export function OrderDetail({ order, business }: { order: Order | null; business
     const { error: err } = await updateOrderStatus(order.id, nextStatus);
     if (err) {
       setBusy(null);
-      setError(err);
+      setError(friendlyErrorMessage(err, t));
       return;
     }
     // Auto-print both tickets on acceptance if the pref is on. Runs in the
@@ -70,7 +71,7 @@ export function OrderDetail({ order, business }: { order: Order | null; business
       const autoPrint = pos ? await pos.prefs.get<boolean>('autoPrintOnAccept') : true;
       if (autoPrint) {
         printOrder(order, business, 'both').then((r) => {
-          if (!r.ok) setError(`Auto-print: ${r.errors.join('; ')}`);
+          if (!r.ok) setError(friendlyPrintErrors(r.errors, t, 'auto'));
         });
       }
     }
@@ -83,7 +84,7 @@ export function OrderDetail({ order, business }: { order: Order | null; business
     setError(null);
     const r = await printOrder(order, business, mode);
     setBusy(null);
-    if (!r.ok) setError(`Print: ${r.errors.join('; ')}`);
+    if (!r.ok) setError(friendlyPrintErrors(r.errors, t, 'manual'));
   };
 
   const doCancel = async () => {
@@ -92,7 +93,7 @@ export function OrderDetail({ order, business }: { order: Order | null; business
     setError(null);
     const { error: err } = await updateOrderStatus(order.id, 'cancelled', cancelReason || null);
     setBusy(null);
-    if (err) setError(err);
+    if (err) setError(friendlyErrorMessage(err, t));
     else {
       setAskCancel(false);
       setCancelReason('');
@@ -216,7 +217,7 @@ export function OrderDetail({ order, business }: { order: Order | null; business
             )}
           </button>
         )}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           <button
             onClick={() => doPrint('both')}
             disabled={busy !== null}
@@ -229,18 +230,20 @@ export function OrderDetail({ order, business }: { order: Order | null; business
           <button
             onClick={() => doPrint('kitchen')}
             disabled={busy !== null}
-            style={{ ...styles.secondary, padding: '10px 10px', opacity: busy ? 0.5 : 1 }}
+            style={{ ...styles.secondary, opacity: busy ? 0.5 : 1 }}
             title={t('orders.action.printKitchen')}
           >
-            K
+            <ChefHat size={14} />
+            <span>{t('orders.action.kitchen')}</span>
           </button>
           <button
             onClick={() => doPrint('customer')}
             disabled={busy !== null}
-            style={{ ...styles.secondary, padding: '10px 10px', opacity: busy ? 0.5 : 1 }}
+            style={{ ...styles.secondary, opacity: busy ? 0.5 : 1 }}
             title={t('orders.action.printCustomer')}
           >
-            C
+            <Receipt size={14} />
+            <span>{t('orders.action.customer')}</span>
           </button>
         </div>
         {cancellable &&

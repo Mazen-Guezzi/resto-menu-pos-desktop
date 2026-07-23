@@ -18,6 +18,8 @@ import {
   type NewOrderLineExtra,
   type NewOrderPayload,
 } from '../../../lib/orders/create';
+import { friendlyErrorMessage } from '../../../lib/orders/errors';
+import { geocodeAddress } from '../../../lib/geocode';
 import { printOrder } from '../../../lib/orders/print';
 import { getPosApi } from '../../../lib/pos-api';
 import type { OrderType } from '../../../lib/orders/types';
@@ -61,10 +63,11 @@ export default function NewOrderPage() {
 
   const { categories, loading: menuLoading } = useMenu(active?.id ?? null);
 
-  const [customerName, setCustomerName] = useState('Walk-in');
+  const [customerName, setCustomerName] = useState(() => t('newOrder.defaultCustomerName'));
   const [customerPhone, setCustomerPhone] = useState('');
   const [type, setType] = useState<OrderType>('dine_in');
   const [tableNumber, setTableNumber] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<CartLine[]>([]);
   const [pickerProduct, setPickerProduct] = useState<MenuProduct | null>(null);
@@ -150,7 +153,10 @@ export default function NewOrderPage() {
     !!active &&
     customerName.trim().length > 0 &&
     subtotalCents > 0 &&
-    lines.every((l) => l.product_name.trim().length > 0);
+    lines.every((l) => l.product_name.trim().length > 0) &&
+    // DB constraints: dine_in requires a table number, delivery requires an address.
+    (type !== 'dine_in' || tableNumber.trim().length > 0) &&
+    (type !== 'delivery' || deliveryAddress.trim().length > 0);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -170,10 +176,28 @@ export default function NewOrderPage() {
       extras: l.extras.length > 0 ? l.extras : undefined,
     }));
 
+    // Geocode the delivery address so we can satisfy the DB's
+    // `delivery_requires_location` check constraint (both lat + lng non-null).
+    let deliveryLat: number | null = null;
+    let deliveryLng: number | null = null;
+    if (type === 'delivery') {
+      const coords = await geocodeAddress(deliveryAddress);
+      if (!coords) {
+        setSubmitting(false);
+        setError(t('orders.error.geocode'));
+        return;
+      }
+      deliveryLat = coords.lat;
+      deliveryLng = coords.lng;
+    }
+
     const payload: NewOrderPayload = {
       business_id: active.id,
       type,
       table_number: type === 'dine_in' ? tableNumber.trim() || null : null,
+      delivery_address: type === 'delivery' ? deliveryAddress.trim() || null : null,
+      delivery_lat: deliveryLat,
+      delivery_lng: deliveryLng,
       customer_name: customerName.trim(),
       customer_phone: customerPhone.trim() || '-',
       notes: notes.trim() || null,
@@ -187,7 +211,7 @@ export default function NewOrderPage() {
     setSubmitting(false);
 
     if (!result.ok) {
-      setError(result.error ?? t('newOrder.failed'));
+      setError(friendlyErrorMessage(result.error, t));
       return;
     }
 
@@ -250,6 +274,7 @@ export default function NewOrderPage() {
     setCustomerPhone('');
     setNotes('');
     setTableNumber('');
+    setDeliveryAddress('');
     setTimeout(() => router.push('/orders'), 800);
   };
 
@@ -370,12 +395,33 @@ export default function NewOrderPage() {
             </div>
 
             {type === 'dine_in' && (
-              <Field label={t('orders.table')}>
+              <Field label={`${t('orders.table')} *`}>
                 <input
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
                   placeholder={t('newOrder.tablePlaceholder')}
-                  style={styles.input}
+                  required
+                  style={{
+                    ...styles.input,
+                    borderColor: tableNumber.trim() ? '#2a2f3d' : '#78350f',
+                  }}
+                />
+              </Field>
+            )}
+
+            {type === 'delivery' && (
+              <Field label={`${t('newOrder.deliveryAddress')} *`}>
+                <textarea
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder={t('newOrder.deliveryAddressPlaceholder')}
+                  required
+                  rows={2}
+                  style={{
+                    ...styles.input,
+                    resize: 'vertical' as const,
+                    borderColor: deliveryAddress.trim() ? '#2a2f3d' : '#78350f',
+                  }}
                 />
               </Field>
             )}

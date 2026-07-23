@@ -76,8 +76,12 @@ export function usePendingOrdersCount(businessId: number | null | undefined) {
 
   useEffect(() => {
     if (!businessId) return;
+    // Unique per-hook topic so mounting `usePendingOrdersCount` in more than
+    // one place (e.g. the (pos) layout for the dock badge + a page that
+    // shows the count) doesn't collide on a shared channel name.
+    const topic = `orders_badge_${businessId}_${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(`orders_badge_${businessId}`)
+      .channel(topic)
       .on(
         'postgres_changes' as never,
         {

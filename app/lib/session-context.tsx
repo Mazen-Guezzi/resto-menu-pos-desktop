@@ -23,24 +23,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [activeBusinessId, setActiveBusinessIdState] = useState<string | null>(null);
 
   useEffect(() => {
-    // React strict mode double-invokes this effect in dev. We let both runs
-    // proceed — each keeps its own `cancelled` flag so the survivor still
-    // finishes hydration. Attempting to dedupe with a module/ref guard
-    // strands the second run and the app stays "Loading…" forever.
+    // Supabase JS now owns session persistence via posAuthStorage — it
+    // reads the stored tokens on client construction and refreshes them in
+    // the background. We just need to (a) surface the current session to
+    // React state and (b) load the active-business preference on boot.
     let cancelled = false;
 
     (async () => {
-      const pos = getPosApi();
       try {
+        const { data } = await supabase.auth.getSession();
+        if (!cancelled) setSession(data.session);
+        const pos = getPosApi();
         if (pos) {
-          const stored = await pos.auth.load();
-          if (stored && !cancelled) {
-            const { data } = await supabase.auth.setSession({
-              access_token: stored.access_token,
-              refresh_token: stored.refresh_token,
-            });
-            if (!cancelled) setSession(data.session);
-          }
           const bizId = await pos.prefs.get<string | null>('activeBusinessId');
           if (!cancelled) setActiveBusinessIdState(bizId ?? null);
         }
@@ -53,19 +47,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
-      const pos = getPosApi();
-      if (!pos) return;
-      if (next) {
-        pos.auth.save({
-          access_token: next.access_token,
-          refresh_token: next.refresh_token,
-          expires_at: next.expires_at,
-          user_id: next.user?.id,
-          email: next.user?.email ?? null,
-        });
-      } else {
-        pos.auth.clear();
-      }
     });
 
     return () => {

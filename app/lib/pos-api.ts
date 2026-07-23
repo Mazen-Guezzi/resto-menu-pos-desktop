@@ -22,12 +22,17 @@ export interface PosApi {
     load: () => Promise<StoredSession | null>;
     clear: () => Promise<boolean>;
   };
+  storage: {
+    get: (key: string) => Promise<string | null>;
+    set: (key: string, value: string) => Promise<void>;
+    remove: (key: string) => Promise<void>;
+  };
   notify: {
     newOrder: (payload: { orderId: number; title: string; body: string }) => Promise<void>;
     onClick: (cb: (payload: { orderId: number }) => void) => () => void;
   };
   badge: {
-    set: (pending: number) => Promise<void>;
+    set: (args: number | { pending: number; iconDataUrl?: string }) => Promise<void>;
   };
   print: {
     ticket: (args: { html: string; deviceName?: string }) => Promise<{ ok: boolean; error?: string }>;

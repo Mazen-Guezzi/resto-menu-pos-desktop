@@ -7,6 +7,15 @@ import { prefs } from './prefs';
 
 const TOGGLE_SHORTCUT = process.platform === 'darwin' ? 'Cmd+Shift+O' : 'Ctrl+Shift+O';
 
+// Must run before `whenReady`: sets the process/dock/tray display name to
+// "SwiftQR POS" instead of the executable name ("Electron" in dev, or the
+// app bundle name in packaged builds). Also sets the Windows App User Model
+// ID so notifications + jump lists group under one app.
+app.setName('SwiftQR POS');
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.swiftqr.pos');
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 const gotTheLock = app.requestSingleInstanceLock();

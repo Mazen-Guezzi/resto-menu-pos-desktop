@@ -25,6 +25,13 @@ const api = {
     clear: (): Promise<boolean> => ipcRenderer.invoke(CH.authClear),
   },
 
+  storage: {
+    get: (key: string): Promise<string | null> => ipcRenderer.invoke(CH.storageGet, key),
+    set: (key: string, value: string): Promise<void> =>
+      ipcRenderer.invoke(CH.storageSet, key, value),
+    remove: (key: string): Promise<void> => ipcRenderer.invoke(CH.storageRemove, key),
+  },
+
   notify: {
     newOrder: (payload: { orderId: number; title: string; body: string }): Promise<void> =>
       ipcRenderer.invoke(CH.notifyNewOrder, payload),
@@ -37,7 +44,8 @@ const api = {
   },
 
   badge: {
-    set: (pending: number): Promise<void> => ipcRenderer.invoke(CH.badgeSet, pending),
+    set: (args: number | { pending: number; iconDataUrl?: string }): Promise<void> =>
+      ipcRenderer.invoke(CH.badgeSet, args),
   },
 
   print: {

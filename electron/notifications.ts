@@ -37,27 +37,41 @@ export function showOrderNotification(
   n.show();
 }
 
-const ICON_PIXEL = new Uint8Array([
-  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0,
-  0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 15, 0, 1, 1, 1, 0, 24, 221,
-  138, 60, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
-]);
+/**
+ * Cross-platform badge update.
+ *
+ *   macOS: `app.setBadgeCount(n)` puts the number in the red bubble on the
+ *          Dock icon — no custom drawing needed.
+ *   Linux (Unity / KDE 5.16+): `app.setBadgeCount(n)` shows a numbered
+ *          launcher badge via libunity-integration.
+ *   Windows: no built-in dock-badge concept, so we draw a small numbered
+ *            icon in the renderer (canvas → data URL) and hand it to
+ *            `mainWindow.setOverlayIcon`, which shows it in the corner of
+ *            the taskbar icon.
+ */
+export function updateBadge(
+  win: BrowserWindow | null,
+  pending: number,
+  iconDataUrl?: string,
+): void {
+  const n = Math.max(0, Math.floor(pending));
 
-export function updateBadge(win: BrowserWindow | null, pending: number): void {
-  // macOS + Linux (Unity): dock badge count.
   if (typeof app.setBadgeCount === 'function') {
     try {
-      app.setBadgeCount(pending);
+      app.setBadgeCount(n);
     } catch {
       /* platform doesn't support it — no-op */
     }
   }
-  // Windows: taskbar overlay icon. We use a 1x1 transparent icon just to make
-  // the overlay-slot known; a real numbered icon lands in M6 with real assets.
+
   if (process.platform === 'win32' && win && !win.isDestroyed()) {
-    if (pending > 0) {
-      const img = nativeImage.createFromBuffer(Buffer.from(ICON_PIXEL));
-      win.setOverlayIcon(img, `${pending} new order${pending === 1 ? '' : 's'}`);
+    if (n > 0 && iconDataUrl) {
+      try {
+        const img = nativeImage.createFromDataURL(iconDataUrl);
+        win.setOverlayIcon(img, `${n} new order${n === 1 ? '' : 's'}`);
+      } catch (err) {
+        console.warn('[badge] failed to set overlay icon', err);
+      }
     } else {
       win.setOverlayIcon(null, '');
     }

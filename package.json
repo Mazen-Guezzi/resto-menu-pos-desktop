@@ -1,7 +1,7 @@
 {
   "name": "resto-menu-pos-desktop",
   "productName": "SwiftQR POS",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Desktop POS for SwiftQR — silent-print orders, offline queue, floating window",
   "author": {
     "name": "SwiftQR",
