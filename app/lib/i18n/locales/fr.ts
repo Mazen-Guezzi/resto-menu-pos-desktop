@@ -145,11 +145,33 @@ const fr: Translations = {
     kitchen: 'Imprimante cuisine',
     customer: 'Imprimante client',
     testPrint: 'Test d’impression',
+    testOk: 'Envoyé',
     printing: 'Impression…',
     noPrinters:
       'Aucune imprimante détectée. Installez un pilote d’imprimante dans votre OS, puis rouvrez cette page.',
     systemDefault: 'Par défaut du système',
     default: 'défaut',
+    osPrinter: 'Imprimante OS',
+    transport: {
+      os: 'Pilote OS',
+      network: 'Wi-Fi / IP',
+      usb: 'USB',
+      bluetooth: 'Bluetooth',
+    },
+    network: {
+      host: 'Adresse IP / hôte',
+      port: 'Port',
+      hint: 'ESC/POS brut sur TCP. La plupart des imprimantes thermiques écoutent sur le port 9100. Fonctionne en Ethernet ou Wi-Fi.',
+    },
+    usb: {
+      device: 'Périphérique USB',
+      pick: 'Choisir un périphérique',
+      none: 'Aucune imprimante USB détectée. Branchez l’imprimante et rouvrez cette page.',
+      hint: 'ESC/POS brut via USB (contourne le pilote OS). Sous Linux, des règles udev peuvent être nécessaires selon le vendor ID.',
+    },
+    bluetooth: {
+      notice: 'Pour une imprimante thermique Bluetooth, jumelez-la au niveau du système (Paramètres → Bluetooth), puis choisissez « Pilote OS » ci-dessus. L’ESC/POS brut Bluetooth n’est pas encore pris en charge.',
+    },
     window: 'Fenêtre',
     floatingMode: 'Mode flottant',
     floatingHint:

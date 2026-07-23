@@ -1,13 +1,18 @@
 import Store from 'electron-store';
 
+export type PrinterConfig =
+  | { type: 'os'; deviceName?: string | null }
+  | { type: 'network'; host: string; port?: number }
+  | { type: 'usb'; vendorId: number; productId: number; label?: string };
+
 export interface Prefs {
   windowBounds: { x?: number; y?: number; width: number; height: number };
   preFloatingBounds: { x?: number; y?: number; width: number; height: number } | null;
   floating: boolean;
   soundEnabled: boolean;
   activeBusinessId: string | null;
-  printerKitchen: string | null;
-  printerCustomer: string | null;
+  printerKitchen: PrinterConfig | null;
+  printerCustomer: PrinterConfig | null;
   autoPrintOnAccept: boolean;
   hideDockOnTray: boolean;
   lang: 'en' | 'fr' | 'ar';

@@ -46,6 +46,18 @@ const api = {
     listPrinters: (): Promise<
       Array<{ name: string; displayName: string; description: string; isDefault: boolean; status: number }>
     > => ipcRenderer.invoke(CH.printListPrinters),
+    listUsb: (): Promise<
+      Array<{ vendorId: number; productId: number; manufacturer?: string; product?: string; serial?: string }>
+    > => ipcRenderer.invoke(CH.printListUsb),
+    order: (args: {
+      order: unknown;
+      mode: 'kitchen' | 'customer' | 'both';
+      html?: { kitchen?: string; customer?: string };
+    }): Promise<{ ok: boolean; errors: string[] }> => ipcRenderer.invoke(CH.printOrder, args),
+    testConfig: (args: {
+      config: unknown;
+      kind: 'kitchen' | 'customer';
+    }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(CH.printTestConfig, args),
   },
 
   outbox: {

@@ -10,10 +10,11 @@ export interface PrintResult {
 }
 
 /**
- * High-level print flow. Reads per-mode printer preferences from electron-store
- * and routes each ticket (kitchen / customer) to its configured printer via a
- * hidden BrowserWindow silent print. If a printer isn't configured, the OS
- * default is used.
+ * Route an order to the configured kitchen + customer printers. Main-process
+ * router picks between OS silent print (needs the HTML), raw ESC/POS over
+ * network, or raw ESC/POS over USB based on each side's saved PrinterConfig.
+ * We always pre-render both HTML variants so the router can pick whichever
+ * matches the pref without another round-trip.
  */
 export async function printOrder(
   order: Order,
@@ -23,35 +24,54 @@ export async function printOrder(
   const pos = getPosApi();
   if (!pos) return { ok: false, errors: ['Print unavailable — not running in Electron'] };
 
-  const kitchenDevice = (await pos.prefs.get<string | null>('printerKitchen')) || undefined;
-  const customerDevice = (await pos.prefs.get<string | null>('printerCustomer')) || undefined;
+  const escpos = orderToEscposPayload(order, business);
+  const html = {
+    kitchen: mode === 'kitchen' || mode === 'both' ? buildReceiptDocument(order, business, 'kitchen') : undefined,
+    customer: mode === 'customer' || mode === 'both' ? buildReceiptDocument(order, business, 'customer') : undefined,
+  };
 
-  const tickets: Array<{ html: string; deviceName?: string; label: string }> = [];
-  if (mode === 'kitchen' || mode === 'both') {
-    tickets.push({
-      html: buildReceiptDocument(order, business, 'kitchen'),
-      deviceName: kitchenDevice,
-      label: 'kitchen',
-    });
-  }
-  if (mode === 'customer' || mode === 'both') {
-    tickets.push({
-      html: buildReceiptDocument(order, business, 'customer'),
-      deviceName: customerDevice,
-      label: 'customer',
-    });
-  }
-
-  const errors: string[] = [];
-  for (const t of tickets) {
-    const res = await pos.print.ticket({ html: t.html, deviceName: t.deviceName });
-    if (!res.ok) errors.push(`${t.label}: ${res.error ?? 'unknown error'}`);
-  }
-  return { ok: errors.length === 0, errors };
+  const res = await pos.print.order({ order: escpos, mode, html });
+  return { ok: res.ok, errors: res.errors };
 }
 
 export async function listPrinters() {
   const pos = getPosApi();
   if (!pos) return [];
   return pos.print.listPrinters();
+}
+
+// ---------------------------------------------------------------------------
+// Shape the Order into the trimmed, serializable form the main-process
+// ESC/POS builder expects. Keep this in sync with EscposOrder in
+// electron/printing/receipt-escpos.ts.
+// ---------------------------------------------------------------------------
+
+function orderToEscposPayload(order: Order, business: PrintBusinessInfo | null) {
+  return {
+    short_code: order.short_code,
+    type: order.type,
+    table_number: order.table_number,
+    customer_name: order.customer_name,
+    customer_phone: order.customer_phone,
+    notes: order.notes,
+    subtotal_cents: order.subtotal_cents,
+    total_cents: order.total_cents,
+    currency: order.currency,
+    created_at: order.created_at,
+    items: (order.items ?? []).map((it) => ({
+      quantity: it.quantity,
+      product_name: it.product_name,
+      variant_name: it.variant_name,
+      line_total_cents: it.line_total_cents,
+      note: it.note,
+      extras: (it.extras ?? []).map((ex) => ({
+        name: ex.name,
+        group_name: ex.group_name ?? null,
+        price_cents: ex.price_cents,
+      })),
+    })),
+    business_name: business?.name ?? null,
+    business_address: business?.address ?? null,
+    business_phone: business?.phone_number ?? null,
+  };
 }

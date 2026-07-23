@@ -143,10 +143,32 @@ const en = {
     kitchen: 'Kitchen printer',
     customer: 'Customer printer',
     testPrint: 'Test print',
+    testOk: 'Sent',
     printing: 'Printing…',
     noPrinters: 'No printers detected. Install a printer driver in your OS, then reopen this page.',
     systemDefault: 'System default',
     default: 'default',
+    osPrinter: 'OS printer',
+    transport: {
+      os: 'OS driver',
+      network: 'Wi-Fi / IP',
+      usb: 'USB',
+      bluetooth: 'Bluetooth',
+    },
+    network: {
+      host: 'IP address / hostname',
+      port: 'Port',
+      hint: 'Raw ESC/POS over TCP. Most thermal printers listen on port 9100. Works for Ethernet or Wi-Fi printers.',
+    },
+    usb: {
+      device: 'USB device',
+      pick: 'Pick a device',
+      none: 'No USB printers detected. Plug the printer in and reopen this page.',
+      hint: 'Raw ESC/POS over USB (bypasses the OS driver). On Linux you may need udev rules for your printer\'s vendor ID.',
+    },
+    bluetooth: {
+      notice: 'For Bluetooth thermal printers, pair the printer at the operating system level (System Settings → Bluetooth), then pick "OS driver" above. Raw Bluetooth ESC/POS from the desktop app is not yet supported.',
+    },
     window: 'Window',
     floatingMode: 'Floating mode',
     floatingHint:

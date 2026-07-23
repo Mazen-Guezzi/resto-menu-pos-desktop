@@ -7,33 +7,12 @@ import { getPosApi, type OutboxEntry } from '../../lib/pos-api';
 import { playNewOrderSound } from '../../lib/orders/sound';
 import { SUPPORTED_LANGS, type Lang } from '../../lib/i18n';
 import { setLang } from '../../lib/i18n/provider';
-
-type Printer = { name: string; displayName: string; isDefault: boolean };
-
-const TEST_HTML = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-  body { font-family: -apple-system, sans-serif; margin: 0; padding: 8mm; }
-  h1 { font-size: 18px; margin: 0 0 8px; }
-  .divider { border-top: 2px dashed #000; margin: 10px 0; }
-  .small { font-size: 12px; color: #333; }
-</style></head><body>
-  <h1>SwiftQR POS</h1>
-  <div class="small">Test print</div>
-  <div class="divider"></div>
-  <div>If you can read this, silent printing is working on this printer.</div>
-  <div class="divider"></div>
-  <div class="small">${new Date().toLocaleString()}</div>
-</body></html>`;
+import { PrinterCard } from './_components/printer-card';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const [printers, setPrinters] = useState<Printer[] | null>(null);
-  const [kitchen, setKitchen] = useState<string | null>(null);
-  const [customer, setCustomer] = useState<string | null>(null);
   const [autoPrint, setAutoPrint] = useState(true);
   const [soundOn, setSoundOn] = useState(true);
-  const [testing, setTesting] = useState<'kitchen' | 'customer' | null>(null);
-  const [testError, setTestError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [outbox, setOutbox] = useState<OutboxEntry[]>([]);
   const [floating, setFloating] = useState(false);
@@ -54,15 +33,9 @@ export default function SettingsPage() {
       return;
     }
     Promise.all([
-      pos.print.listPrinters(),
-      pos.prefs.get<string | null>('printerKitchen'),
-      pos.prefs.get<string | null>('printerCustomer'),
       pos.prefs.get<boolean>('autoPrintOnAccept'),
       pos.prefs.get<boolean>('soundEnabled'),
-    ]).then(([list, k, c, ap, sound]) => {
-      setPrinters(list);
-      setKitchen(k ?? null);
-      setCustomer(c ?? null);
+    ]).then(([ap, sound]) => {
       setAutoPrint(ap ?? true);
       setSoundOn(sound ?? true);
       setLoading(false);
@@ -96,14 +69,6 @@ export default function SettingsPage() {
     refreshOutbox();
   };
 
-  const savePrinter = (mode: 'kitchen' | 'customer', name: string | null) => {
-    const pos = getPosApi();
-    if (!pos) return;
-    if (mode === 'kitchen') setKitchen(name);
-    else setCustomer(name);
-    pos.prefs.set(mode === 'kitchen' ? 'printerKitchen' : 'printerCustomer', name);
-  };
-
   const toggle = async (key: 'autoPrintOnAccept' | 'soundEnabled', v: boolean) => {
     const pos = getPosApi();
     if (!pos) return;
@@ -124,17 +89,6 @@ export default function SettingsPage() {
     if (!pos) return;
     setHideDock(v);
     await pos.prefs.set('hideDockOnTray', v);
-  };
-
-  const testPrint = async (mode: 'kitchen' | 'customer') => {
-    const pos = getPosApi();
-    if (!pos) return;
-    setTesting(mode);
-    setTestError(null);
-    const deviceName = (mode === 'kitchen' ? kitchen : customer) ?? undefined;
-    const res = await pos.print.ticket({ html: TEST_HTML, deviceName });
-    setTesting(null);
-    if (!res.ok) setTestError(`${mode}: ${res.error ?? 'failed'}`);
   };
 
   return (
@@ -176,44 +130,10 @@ export default function SettingsPage() {
 
           <section style={styles.section}>
             <div style={styles.sectionTitle}>{t('settings.printers')}</div>
-            <div style={styles.field}>
-              <label style={styles.label}>{t('settings.kitchen')}</label>
-              <PrinterSelect
-                printers={printers}
-                value={kitchen}
-                onChange={(v) => savePrinter('kitchen', v)}
-                systemDefaultLabel={t('settings.systemDefault')}
-                defaultLabel={t('settings.default')}
-              />
-              <button
-                onClick={() => testPrint('kitchen')}
-                disabled={testing !== null || !printers || printers.length === 0}
-                style={styles.testButton}
-              >
-                {testing === 'kitchen' ? t('settings.printing') : t('settings.testPrint')}
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <PrinterCard prefKey="printerKitchen" title={t('settings.kitchen')} />
+              <PrinterCard prefKey="printerCustomer" title={t('settings.customer')} />
             </div>
-            <div style={styles.field}>
-              <label style={styles.label}>{t('settings.customer')}</label>
-              <PrinterSelect
-                printers={printers}
-                value={customer}
-                onChange={(v) => savePrinter('customer', v)}
-                systemDefaultLabel={t('settings.systemDefault')}
-                defaultLabel={t('settings.default')}
-              />
-              <button
-                onClick={() => testPrint('customer')}
-                disabled={testing !== null || !printers || printers.length === 0}
-                style={styles.testButton}
-              >
-                {testing === 'customer' ? t('settings.printing') : t('settings.testPrint')}
-              </button>
-            </div>
-            {testError && <div style={styles.error}>{testError}</div>}
-            {printers && printers.length === 0 && (
-              <div style={styles.hint}>{t('settings.noPrinters')}</div>
-            )}
           </section>
 
           <section style={styles.section}>
@@ -302,36 +222,6 @@ export default function SettingsPage() {
         </>
       )}
     </div>
-  );
-}
-
-function PrinterSelect({
-  printers,
-  value,
-  onChange,
-  systemDefaultLabel,
-  defaultLabel,
-}: {
-  printers: Printer[] | null;
-  value: string | null;
-  onChange: (v: string | null) => void;
-  systemDefaultLabel: string;
-  defaultLabel: string;
-}) {
-  return (
-    <select
-      value={value ?? ''}
-      onChange={(e) => onChange(e.target.value || null)}
-      style={styles.select}
-    >
-      <option value="">{systemDefaultLabel}</option>
-      {(printers ?? []).map((p) => (
-        <option key={p.name} value={p.name}>
-          {p.displayName}
-          {p.isDefault ? ` (${defaultLabel})` : ''}
-        </option>
-      ))}
-    </select>
   );
 }
 

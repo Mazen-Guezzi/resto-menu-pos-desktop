@@ -2,7 +2,15 @@ import { app, ipcMain, BrowserWindow, screen } from 'electron';
 import { prefs, type Prefs, FLOATING_SIZE } from './prefs';
 import { saveSession, loadSession, clearSession } from './auth-store';
 import { showOrderNotification, updateBadge, type NewOrderNotifPayload } from './notifications';
-import { printTicket, listPrinters, type PrintTicketArgs } from './printing';
+import { printTicket, listPrinters, type PrintTicketArgs } from './printing/os';
+import { listUsbPrinters, sendToUsbPrinter } from './printing/usb';
+import { sendToNetworkPrinter } from './printing/network';
+import {
+  buildCustomerReceipt,
+  buildKitchenTicket,
+  type EscposOrder,
+} from './printing/receipt-escpos';
+import { printOrderToConfigured, type PrinterConfig } from './printing/router';
 import {
   enqueue as outboxEnqueue,
   listOutbox,
@@ -96,6 +104,73 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
   ipcMain.handle(CH.printTicket, (_e, args: PrintTicketArgs) => printTicket(args));
 
   ipcMain.handle(CH.printListPrinters, () => listPrinters());
+
+  ipcMain.handle(CH.printListUsb, () => listUsbPrinters());
+
+  ipcMain.handle(
+    CH.printOrder,
+    (
+      _e,
+      args: {
+        order: EscposOrder;
+        mode: 'kitchen' | 'customer' | 'both';
+        html?: { kitchen?: string; customer?: string };
+      },
+    ) => {
+      return printOrderToConfigured(
+        {
+          order: args.order,
+          mode: args.mode,
+          config: {
+            kitchen: prefs.get('printerKitchen'),
+            customer: prefs.get('printerCustomer'),
+          },
+          html: args.html,
+        },
+        (html, deviceName) => printTicket({ html, deviceName: deviceName || undefined }),
+      );
+    },
+  );
+
+  ipcMain.handle(
+    CH.printTestConfig,
+    async (_e, args: { config: PrinterConfig; kind: 'kitchen' | 'customer' }) => {
+      // Build a tiny sample ticket so the operator can verify formatting.
+      const now = new Date().toISOString();
+      const sample: EscposOrder = {
+        short_code: 'TEST01',
+        type: 'takeaway',
+        table_number: null,
+        customer_name: 'Test',
+        customer_phone: null,
+        notes: null,
+        subtotal_cents: 1500,
+        total_cents: 1500,
+        currency: 'DT',
+        created_at: now,
+        items: [
+          { quantity: 1, product_name: 'Test print', variant_name: null, line_total_cents: 1500 },
+        ],
+        business_name: 'SwiftQR POS',
+      };
+      const bytes = args.kind === 'kitchen' ? buildKitchenTicket(sample) : buildCustomerReceipt(sample);
+      if (args.config.type === 'network') {
+        return sendToNetworkPrinter(bytes, { host: args.config.host, port: args.config.port });
+      }
+      if (args.config.type === 'usb') {
+        return sendToUsbPrinter(bytes, {
+          vendorId: args.config.vendorId,
+          productId: args.config.productId,
+        });
+      }
+      // OS path — use the existing HTML pipeline with the small test doc from before.
+      const html =
+        '<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:8mm"><h1>SwiftQR POS</h1><div>Test print</div><hr><div>' +
+        new Date().toLocaleString() +
+        '</div></body>';
+      return printTicket({ html, deviceName: args.config.deviceName || undefined });
+    },
+  );
 
   ipcMain.handle(
     CH.outboxEnqueue,

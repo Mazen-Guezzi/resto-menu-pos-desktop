@@ -11,6 +11,7 @@ files:
   - dist/**/*
   - out/**/*
   - package.json
+  - node_modules/usb/**/*
   - "!**/*.map"
   - "!**/{README.md,CHANGELOG.md,LICENSE,LICENSE.md,LICENSE.txt}"
   - "!**/{.editorconfig,.eslintrc,.prettierrc,.gitignore,tsconfig.json,tsconfig.electron.json}"
@@ -18,6 +19,12 @@ files:
   - "!**/tests/**"
   - "!**/*.test.js"
   - "!**/*.spec.js"
+
+# Keep the native usb binding unpacked so libusb can actually dlopen it at
+# runtime (asar archives can't be loaded as native binaries).
+asarUnpack:
+  - node_modules/usb/**/*
+  - "**/*.node"
 
 extraMetadata:
   main: dist/electron/main.js

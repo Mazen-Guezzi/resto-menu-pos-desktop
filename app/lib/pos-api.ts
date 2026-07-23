@@ -40,6 +40,24 @@ export interface PosApi {
         status: number;
       }>
     >;
+    listUsb: () => Promise<
+      Array<{
+        vendorId: number;
+        productId: number;
+        manufacturer?: string;
+        product?: string;
+        serial?: string;
+      }>
+    >;
+    order: (args: {
+      order: unknown;
+      mode: 'kitchen' | 'customer' | 'both';
+      html?: { kitchen?: string; customer?: string };
+    }) => Promise<{ ok: boolean; errors: string[] }>;
+    testConfig: (args: {
+      config: PrinterConfig;
+      kind: 'kitchen' | 'customer';
+    }) => Promise<{ ok: boolean; error?: string }>;
   };
   outbox: {
     enqueue: (args: { op: string; payload: unknown; localId?: string }) => Promise<OutboxEntry>;
@@ -70,6 +88,11 @@ export interface OutboxSummary {
   errors: number;
   total: number;
 }
+
+export type PrinterConfig =
+  | { type: 'os'; deviceName?: string | null }
+  | { type: 'network'; host: string; port?: number }
+  | { type: 'usb'; vendorId: number; productId: number; label?: string };
 
 declare global {
   interface Window {

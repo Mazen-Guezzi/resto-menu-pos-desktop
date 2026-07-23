@@ -1,7 +1,7 @@
 {
   "name": "resto-menu-pos-desktop",
   "productName": "SwiftQR POS",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Desktop POS for SwiftQR — silent-print orders, offline queue, floating window",
   "author": {
     "name": "SwiftQR",
@@ -26,6 +26,7 @@
     "dist:win": "npm run build && electron-builder --win --publish never",
     "dist:linux": "npm run build && electron-builder --linux --publish never",
     "release": "npm run build && electron-builder --publish always",
+    "postinstall": "electron-rebuild -f -m . -w usb || true",
     "clean": "rm -rf .next out dist release node_modules"
   },
   "dependencies": {
@@ -37,9 +38,11 @@
     "next": "^14.2.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-i18next": "^15.7.4"
+    "react-i18next": "^15.7.4",
+    "usb": "^2.18.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
