@@ -9,6 +9,8 @@ export interface EscposOrderItem {
   line_total_cents: number;
   note?: string | null;
   extras?: Array<{ name: string; group_name?: string | null; price_cents: number }>;
+  /** Optional — used by the router to filter items per station printer. */
+  product_id?: number | null;
 }
 
 export interface EscposOrder {
@@ -101,10 +103,10 @@ export function buildCustomerReceipt(order: EscposOrder): Buffer {
   return b.build();
 }
 
-export function buildKitchenTicket(order: EscposOrder): Buffer {
+export function buildKitchenTicket(order: EscposOrder, stationLabel = 'CUISINE'): Buffer {
   const b = new EscposBuilder().init().codepage();
 
-  b.align('center').size('double').bold(true).line('CUISINE').bold(false).size('normal');
+  b.align('center').size('double').bold(true).line(stationLabel.toUpperCase()).bold(false).size('normal');
   b.align('center').size('huge').bold(true).line(`#${order.short_code}`).size('normal').bold(false);
 
   b.align('center').bold(true).line(typeLabel(order.type)).bold(false);

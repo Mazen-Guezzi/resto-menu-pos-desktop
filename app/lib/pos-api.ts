@@ -53,7 +53,18 @@ export interface PosApi {
       order: unknown;
       mode: 'kitchen' | 'customer' | 'both';
       html?: { kitchen?: string; customer?: string };
-    }) => Promise<{ ok: boolean; errors: string[] }>;
+      productCategoryIds?: Record<string, number>;
+    }) => Promise<{
+      ok: boolean;
+      errors: string[];
+      dispatched: number;
+      usbDelegated?: Array<{
+        printer: { id: string; name: string; role: 'kitchen' | 'customer' };
+        vendorId: number;
+        productId: number;
+        bytes: number[];
+      }>;
+    }>;
     testConfig: (args: {
       config: PrinterConfig;
       kind: 'kitchen' | 'customer';
@@ -93,6 +104,16 @@ export type PrinterConfig =
   | { type: 'os'; deviceName?: string | null }
   | { type: 'network'; host: string; port?: number }
   | { type: 'usb'; vendorId: number; productId: number; label?: string };
+
+export type PrinterRole = 'kitchen' | 'customer';
+
+export interface Printer {
+  id: string;
+  name: string;
+  role: PrinterRole;
+  config: PrinterConfig;
+  categoryIds?: number[];
+}
 
 declare global {
   interface Window {

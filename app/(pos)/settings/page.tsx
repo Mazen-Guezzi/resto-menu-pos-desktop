@@ -7,7 +7,7 @@ import { getPosApi, type OutboxEntry } from '../../lib/pos-api';
 import { playNewOrderSound } from '../../lib/orders/sound';
 import { SUPPORTED_LANGS, type Lang } from '../../lib/i18n';
 import { setLang } from '../../lib/i18n/provider';
-import { PrinterCard } from './_components/printer-card';
+import { PrintersManager } from './_components/printers-manager';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -130,10 +130,7 @@ export default function SettingsPage() {
 
           <section style={styles.section}>
             <div style={styles.sectionTitle}>{t('settings.printers')}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <PrinterCard prefKey="printerKitchen" title={t('settings.kitchen')} />
-              <PrinterCard prefKey="printerCustomer" title={t('settings.customer')} />
-            </div>
+            <PrintersManager />
           </section>
 
           <section style={styles.section}>

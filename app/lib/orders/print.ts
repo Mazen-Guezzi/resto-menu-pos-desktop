@@ -2,6 +2,7 @@
 
 import { getPosApi } from '../pos-api';
 import { buildReceiptDocument, type PrintBusinessInfo, type PrintMode } from './print-html';
+import { sendBytesToUsbPrinter } from '../webusb';
 import type { Order } from './types';
 
 export interface PrintResult {
@@ -20,6 +21,7 @@ export async function printOrder(
   order: Order,
   business: PrintBusinessInfo | null,
   mode: PrintMode,
+  productCategoryIds?: Record<string, number>,
 ): Promise<PrintResult> {
   const pos = getPosApi();
   if (!pos) return { ok: false, errors: ['Print unavailable — not running in Electron'] };
@@ -30,8 +32,19 @@ export async function printOrder(
     customer: mode === 'customer' || mode === 'both' ? buildReceiptDocument(order, business, 'customer') : undefined,
   };
 
-  const res = await pos.print.order({ order: escpos, mode, html });
-  return { ok: res.ok, errors: res.errors };
+  const res = await pos.print.order({ order: escpos, mode, html, productCategoryIds });
+  const errors = [...res.errors];
+
+  // Dispatch any USB targets the main router handed back to us via WebUSB.
+  for (const target of res.usbDelegated ?? []) {
+    const usbRes = await sendBytesToUsbPrinter(
+      target.vendorId,
+      target.productId,
+      Uint8Array.from(target.bytes),
+    );
+    if (!usbRes.ok) errors.push(`${target.printer.name}: ${usbRes.error ?? 'USB error'}`);
+  }
+  return { ok: errors.length === 0, errors };
 }
 
 export async function listPrinters() {
@@ -64,6 +77,7 @@ function orderToEscposPayload(order: Order, business: PrintBusinessInfo | null) 
       variant_name: it.variant_name,
       line_total_cents: it.line_total_cents,
       note: it.note,
+      product_id: it.product_id ?? null,
       extras: (it.extras ?? []).map((ex) => ({
         name: ex.name,
         group_name: ex.group_name ?? null,

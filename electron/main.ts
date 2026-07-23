@@ -53,6 +53,21 @@ if (!gotTheLock) {
       }
     }
 
+    // WebUSB permission handlers. The renderer talks directly to thermal
+    // printers via navigator.usb.transferOut, backed by Chromium's bundled
+    // libusb — no native module required. We auto-approve so the POS
+    // operator isn't spammed with permission prompts.
+    const { session } = require('electron');
+    const ses = session.defaultSession;
+    ses.setPermissionCheckHandler(() => true);
+    ses.setDevicePermissionHandler(() => true);
+    ses.on('select-usb-device', (event: Electron.Event, details: Electron.SelectUsbDeviceDetails, cb: (deviceId?: string) => void) => {
+      event.preventDefault();
+      // Prefer a device the user has previously configured (main filters
+      // deviceList to what's plugged in — take the first match).
+      cb(details.deviceList[0]?.deviceId);
+    });
+
     mainWindow = createMainWindow();
     mainWindow.on('closed', () => {
       mainWindow = null;

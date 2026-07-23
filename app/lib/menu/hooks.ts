@@ -1,8 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import type { MenuCategory } from './types';
+
+/**
+ * Builds a productId → categoryId lookup from a fetched menu tree. Used by
+ * the print router to fan items out to station-specific printers.
+ */
+export function useProductCategoryMap(
+  categories: MenuCategory[] | null,
+): Record<string, number> {
+  return useMemo(() => {
+    if (!categories) return {};
+    const map: Record<string, number> = {};
+    for (const c of categories) {
+      for (const p of c.products) {
+        map[String(p.id)] = c.id;
+      }
+    }
+    return map;
+  }, [categories]);
+}
 
 /**
  * Fetches categories with nested products / variants / addon_groups / options.

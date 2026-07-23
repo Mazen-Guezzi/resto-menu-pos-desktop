@@ -1,16 +1,16 @@
 import { app, ipcMain, BrowserWindow, screen } from 'electron';
-import { prefs, type Prefs, FLOATING_SIZE } from './prefs';
+import { prefs, migrateLegacyPrinters, type Prefs, FLOATING_SIZE } from './prefs';
 import { saveSession, loadSession, clearSession } from './auth-store';
 import { showOrderNotification, updateBadge, type NewOrderNotifPayload } from './notifications';
 import { printTicket, listPrinters, type PrintTicketArgs } from './printing/os';
-import { listUsbPrinters, sendToUsbPrinter } from './printing/usb';
+import { listUsbPrinters } from './printing/usb';
 import { sendToNetworkPrinter } from './printing/network';
 import {
   buildCustomerReceipt,
   buildKitchenTicket,
   type EscposOrder,
 } from './printing/receipt-escpos';
-import { printOrderToConfigured, type PrinterConfig } from './printing/router';
+import { printOrderToConfigured, type PrinterConfig, type Printer as RouterPrinter } from './printing/router';
 import {
   enqueue as outboxEnqueue,
   listOutbox,
@@ -115,16 +115,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
         order: EscposOrder;
         mode: 'kitchen' | 'customer' | 'both';
         html?: { kitchen?: string; customer?: string };
+        productCategoryIds?: Record<string, number>;
       },
     ) => {
+      // One-shot migration on first print call.
+      migrateLegacyPrinters();
+      const printers = (prefs.get('printers') as RouterPrinter[]) ?? [];
       return printOrderToConfigured(
         {
           order: args.order,
           mode: args.mode,
-          config: {
-            kitchen: prefs.get('printerKitchen'),
-            customer: prefs.get('printerCustomer'),
-          },
+          printers,
+          productCategoryIds: args.productCategoryIds,
           html: args.html,
         },
         (html, deviceName) => printTicket({ html, deviceName: deviceName || undefined }),
@@ -158,10 +160,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null) {
         return sendToNetworkPrinter(bytes, { host: args.config.host, port: args.config.port });
       }
       if (args.config.type === 'usb') {
-        return sendToUsbPrinter(bytes, {
-          vendorId: args.config.vendorId,
-          productId: args.config.productId,
-        });
+        // USB tests come back to the renderer to dispatch via WebUSB.
+        return { ok: false, error: 'usb-delegated', bytes: Array.from(bytes) };
       }
       // OS path — use the existing HTML pipeline with the small test doc from before.
       const html =

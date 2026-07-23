@@ -53,7 +53,9 @@ const api = {
       order: unknown;
       mode: 'kitchen' | 'customer' | 'both';
       html?: { kitchen?: string; customer?: string };
-    }): Promise<{ ok: boolean; errors: string[] }> => ipcRenderer.invoke(CH.printOrder, args),
+      productCategoryIds?: Record<string, number>;
+    }): Promise<{ ok: boolean; errors: string[]; dispatched: number }> =>
+      ipcRenderer.invoke(CH.printOrder, args),
     testConfig: (args: {
       config: unknown;
       kind: 'kitchen' | 'customer';

@@ -27,7 +27,7 @@ const shared = {
   format: 'cjs',
   sourcemap: true,
   logLevel: 'info',
-  external: ['electron', 'electron-store', 'electron-updater', 'better-sqlite3', 'usb'],
+  external: ['electron', 'electron-store', 'electron-updater', 'better-sqlite3'],
   define: {
     'process.env.NODE_ENV': JSON.stringify(watch ? 'development' : 'production'),
   },
